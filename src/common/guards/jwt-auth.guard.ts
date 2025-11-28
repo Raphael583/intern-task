@@ -50,7 +50,9 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Session inactive');
 
     const dbUser = await this.usersService.findById(payload.sub);
-    if (dbUser?.passwordUpdatedAt) {
+    if (!dbUser) throw new UnauthorizedException('User not found');
+
+    if (dbUser.passwordUpdatedAt) {
       const tokenIatMs = (payload.iat || 0) * 1000;
       if (tokenIatMs < new Date(dbUser.passwordUpdatedAt).getTime()) {
         throw new UnauthorizedException(
@@ -59,6 +61,7 @@ export class JwtAuthGuard implements CanActivate {
       }
     }
 
+    // 🔹 Only attach payload; no permissions here
     req['user'] = payload;
     return true;
   }

@@ -11,6 +11,7 @@ import { SessionsModule } from './sessions/sessions.module';
 import { CommonModule } from './common/common.module';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { RolesModule } from './roles/roles.module';
 import { TenantMiddleware } from './common/tenant/tenant.middleware';
 import { join } from 'path';
 
@@ -22,6 +23,7 @@ import { join } from 'path';
     MongooseModule.forRoot(process.env.MONGO_URI!),
     TenantsModule,
     UsersModule,
+    RolesModule,
     AuthModule,
     SessionsModule,
     CommonModule,

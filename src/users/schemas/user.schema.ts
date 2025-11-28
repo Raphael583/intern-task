@@ -7,6 +7,14 @@ export enum UserType {
   PATIENT = 'PATIENT',
 }
 
+export class CreatedBy {
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  user_id: Types.ObjectId;
+
+  @Prop({ required: true })
+  name: string;
+}
+
 @Schema({ timestamps: true })
 export class User extends Document {
   @Prop({ required: true })
@@ -21,11 +29,19 @@ export class User extends Document {
   @Prop({ type: String, enum: UserType, required: true })
   user_type: UserType;
 
+  
   @Prop({ type: Types.ObjectId, ref: 'Hospital', required: true })
-  tenant: Types.ObjectId;   // hospitalId (tenant ID)
+  tenantId: Types.ObjectId;
+
+  
+  @Prop({ type: Types.ObjectId, ref: 'Role', required: true })
+  role: Types.ObjectId;
 
   @Prop()
   passwordUpdatedAt: Date;
+
+  @Prop({ type: CreatedBy })
+  created_by: CreatedBy;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

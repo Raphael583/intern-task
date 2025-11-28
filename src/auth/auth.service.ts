@@ -15,6 +15,8 @@ import { User } from 'src/users/schemas/user.schema';
 import { MailService } from 'src/common/mail/mail.service';
 import { RedisService } from 'src/common/redis/redis.service';
 
+// ...imports unchanged...
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -27,9 +29,6 @@ export class AuthService {
     private redisService: RedisService,
   ) {}
 
-  // ============================
-  // LOGIN
-  // ============================
   async login(body: { email: string; password: string }, tenantId: string) {
     const tenant = await this.tenantsService.findById(tenantId);
     if (!tenant) throw new BadRequestException('Invalid tenant');
@@ -45,15 +44,11 @@ export class AuthService {
     if (!isPassCorrect)
       throw new UnauthorizedException('Invalid email or password');
 
-    // ===========================================
-    // NEW: Check in DB (NOT Redis) for active sessions
-    // ===========================================
     const activeSessions = await this.sessionsService.getActiveSessions(
       user._id.toString(),
       tenantId,
     );
 
-    // If already logged in somewhere else
     if (activeSessions.length > 0) {
       await this.mailService.sendMultiLoginAlert({
         name: user.name,
@@ -61,10 +56,10 @@ export class AuthService {
       });
     }
 
-    // Redis tracking (unchanged)
     const redisKey = `login:${tenantId}:${user._id}`;
     await this.redisService.sadd(redisKey, `session-${Date.now()}`);
 
+    // 🔹 Simple payload like hers: id/type/tenant
     const payload = {
       sub: user._id.toString(),
       email: user.email,
@@ -106,6 +101,9 @@ export class AuthService {
       user,
     };
   }
+
+  // changePassword + logout stay as you already had
+
 
   // ============================
   // LOGOUT
