@@ -15,9 +15,7 @@ import { AuthGuard } from 'src/common/guards/auth.guard';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // --------------------------
-  // CREATE USER  (like her)
-  // --------------------------
+  
   @Post('create-user')
   async createUser(
     @Body() body: any,
@@ -34,9 +32,7 @@ export class UsersController {
     });
   }
 
-  // --------------------------
-  // UPDATE PASSWORD
-  // --------------------------
+
   @Post('update-password')
   async updatePassword(
     @Body() data: { email: string; password: string },
@@ -49,9 +45,9 @@ export class UsersController {
     return this.usersService.updatePassword(data.email, data.password);
   }
 
-  // --------------------------
+
   // GET USERS  (permission inside service)
-  // --------------------------
+
   @UseGuards(AuthGuard) // simple guard like her project
   @Get()
   async getUsers(@Req() req: any) {

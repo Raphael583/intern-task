@@ -29,9 +29,7 @@ export class AuthService {
     private twoFAService: TwoFactorAuthService,
   ) {}
 
-  // =========================================
-  // LOGIN PHASE 1 (EMAIL + PASSWORD)
-  // =========================================
+ 
   async login(body: { email: string; password: string }, tenantId: string) {
     const tenant = await this.tenantsService.findById(tenantId);
     if (!tenant) throw new BadRequestException('Invalid tenant');
@@ -47,7 +45,7 @@ export class AuthService {
     if (!isPassCorrect)
       throw new UnauthorizedException('Invalid email or password');
 
-    // ⭐ 2FA CHECK ⭐
+  
     if (user.isTwoFactorEnabled) {
       return {
         message: 'Enter your 6-digit Google Authenticator code',
@@ -56,15 +54,11 @@ export class AuthService {
       };
     }
 
-    // =========================
-    // NORMAL LOGIN (NO 2FA)
-    // =========================
+    
     return this.finalizeLogin(user, tenantId);
   }
 
-  // =========================================
-  // LOGIN PHASE 2 (VERIFY OTP)
-  // =========================================
+ 
   async verifyTwoFactorLogin(userId: string, code: string, tenantId: string) {
     const user = await this.userModel.findById(userId);
     if (!user) throw new UnauthorizedException('User not found');
@@ -85,9 +79,7 @@ const isValid = this.twoFAService.verifyCode(
     return this.finalizeLogin(user, tenantId);
   }
 
-  // =========================================
-  // FINAL LOGIN HANDLER (USED BY BOTH FLOWS)
-  // =========================================
+ 
   private async finalizeLogin(user: any, tenantId: string) {
     const activeSessions = await this.sessionsService.getActiveSessions(
       user._id.toString(),
@@ -139,9 +131,7 @@ const isValid = this.twoFAService.verifyCode(
     };
   }
 
-  // ================================
-  // CHANGE PASSWORD
-  // ================================
+
   async changePassword(userId: string, current: string, next: string) {
     const user = await this.userModel.findById(userId);
     if (!user) throw new NotFoundException('User not found');
@@ -158,9 +148,7 @@ const isValid = this.twoFAService.verifyCode(
     return { message: 'Password changed successfully' };
   }
 
-  // ================================
-  // LOGOUT
-  // ================================
+
   async logout(userId: string, tenantId: string, sessionId: string) {
     return this.sessionsService.deactivateSession(sessionId, tenantId, userId);
   }

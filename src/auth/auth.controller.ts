@@ -63,9 +63,9 @@ async setupTwoFactor(@Body('email') email: string) {
   };
 }
 
-// =============================
+
 // VERIFY 2FA LOGIN
-// =============================
+
 @Post('2fa/login')
 async twoFactorLogin(
   @Body() body: { userId: string; code: string },
@@ -79,9 +79,9 @@ async twoFactorLogin(
 }
 
 
-  // =============================
+ 
   // CHANGE PASSWORD
-  // =============================
+ 
   @UseGuards(JwtAuthGuard)
   @Post('change-password')
   async changePassword(@Req() req, @Body() body: ChangePasswordDto) {
