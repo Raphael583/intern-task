@@ -40,8 +40,15 @@ export class User extends Document {
   @Prop()
   passwordUpdatedAt: Date;
 
+   @Prop()
+  twoFactorSecret?: string; // secret key shared with Google Authenticator
+
+  @Prop({ default: false })
+  isTwoFactorEnabled: boolean;
+
   @Prop({ type: CreatedBy })
   created_by: CreatedBy;
+
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

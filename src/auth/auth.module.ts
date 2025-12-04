@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { TwoFactorAuthService } from './two-factor-auth.service';
 
 import { UsersModule } from '../users/users.module';
 import { TenantsModule } from '../tenants/tenants.module';
@@ -41,6 +42,7 @@ const jwtExpiresIn: string | number = process.env.JWT_EXPIRES_IN || '1d';
   providers: [
     AuthService,
     JwtAuthGuard,
+    TwoFactorAuthService
   ],
 
   exports: [

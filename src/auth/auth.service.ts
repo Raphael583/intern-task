@@ -14,8 +14,7 @@ import { Model } from 'mongoose';
 import { User } from 'src/users/schemas/user.schema';
 import { MailService } from 'src/common/mail/mail.service';
 import { RedisService } from 'src/common/redis/redis.service';
-
-// ...imports unchanged...
+import { TwoFactorAuthService } from './two-factor-auth.service';
 
 @Injectable()
 export class AuthService {
@@ -27,8 +26,12 @@ export class AuthService {
     private sessionsService: SessionsService,
     private mailService: MailService,
     private redisService: RedisService,
+    private twoFAService: TwoFactorAuthService,
   ) {}
 
+  // =========================================
+  // LOGIN PHASE 1 (EMAIL + PASSWORD)
+  // =========================================
   async login(body: { email: string; password: string }, tenantId: string) {
     const tenant = await this.tenantsService.findById(tenantId);
     if (!tenant) throw new BadRequestException('Invalid tenant');
@@ -44,6 +47,48 @@ export class AuthService {
     if (!isPassCorrect)
       throw new UnauthorizedException('Invalid email or password');
 
+    // ⭐ 2FA CHECK ⭐
+    if (user.isTwoFactorEnabled) {
+      return {
+        message: 'Enter your 6-digit Google Authenticator code',
+        twoFactorRequired: true,
+        userId: user._id.toString(),
+      };
+    }
+
+    // =========================
+    // NORMAL LOGIN (NO 2FA)
+    // =========================
+    return this.finalizeLogin(user, tenantId);
+  }
+
+  // =========================================
+  // LOGIN PHASE 2 (VERIFY OTP)
+  // =========================================
+  async verifyTwoFactorLogin(userId: string, code: string, tenantId: string) {
+    const user = await this.userModel.findById(userId);
+    if (!user) throw new UnauthorizedException('User not found');
+
+   if (!user.twoFactorSecret) {
+  throw new UnauthorizedException('2FA is not enabled for this user');
+}
+
+const isValid = this.twoFAService.verifyCode(
+  user.twoFactorSecret,
+  code,
+);
+
+
+    if (!isValid)
+      throw new UnauthorizedException('Invalid or expired 2FA code');
+
+    return this.finalizeLogin(user, tenantId);
+  }
+
+  // =========================================
+  // FINAL LOGIN HANDLER (USED BY BOTH FLOWS)
+  // =========================================
+  private async finalizeLogin(user: any, tenantId: string) {
     const activeSessions = await this.sessionsService.getActiveSessions(
       user._id.toString(),
       tenantId,
@@ -59,7 +104,6 @@ export class AuthService {
     const redisKey = `login:${tenantId}:${user._id}`;
     await this.redisService.sadd(redisKey, `session-${Date.now()}`);
 
-    // 🔹 Simple payload like hers: id/type/tenant
     const payload = {
       sub: user._id.toString(),
       email: user.email,
@@ -67,25 +111,18 @@ export class AuthService {
       tenant: tenantId,
     };
 
-    const accessToken = await this.jwtService.signAsync(
-      payload,
-      {
-        secret: process.env.JWT_SECRET as string,
-        expiresIn: process.env.JWT_EXPIRES_IN as unknown as `${number}${string}`,
-      } as any,
-    );
+    const accessToken = await this.jwtService.signAsync(payload, {
+      secret: process.env.JWT_SECRET as string,
+      expiresIn: process.env.JWT_EXPIRES_IN as any,
+    });
 
-    const refreshToken = await this.jwtService.signAsync(
-      payload,
-      {
-        secret:
-          (process.env.JWT_REFRESH_SECRET as string) ||
-          (process.env.JWT_SECRET as string),
-        expiresIn:
-          (process.env.JWT_REFRESH_EXPIRES_IN as unknown as `${number}${string}`) ||
-          '7d',
-      } as any,
-    );
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret:
+        (process.env.JWT_REFRESH_SECRET as string) ||
+        (process.env.JWT_SECRET as string),
+      expiresIn:
+        (process.env.JWT_REFRESH_EXPIRES_IN as any) || '7d',
+    });
 
     await this.sessionsService.createSession(
       user._id.toString(),
@@ -102,19 +139,9 @@ export class AuthService {
     };
   }
 
-  // changePassword + logout stay as you already had
-
-
-  // ============================
-  // LOGOUT
-  // ============================
-  async logout(userId: string, tenantId: string, sessionId: string) {
-    return this.sessionsService.deactivateSession(sessionId, tenantId, userId);
-  }
-
-  // ============================
+  // ================================
   // CHANGE PASSWORD
-  // ============================
+  // ================================
   async changePassword(userId: string, current: string, next: string) {
     const user = await this.userModel.findById(userId);
     if (!user) throw new NotFoundException('User not found');
@@ -129,5 +156,12 @@ export class AuthService {
     await this.sessionsService.invalidateAllSessionsForUser(userId);
 
     return { message: 'Password changed successfully' };
+  }
+
+  // ================================
+  // LOGOUT
+  // ================================
+  async logout(userId: string, tenantId: string, sessionId: string) {
+    return this.sessionsService.deactivateSession(sessionId, tenantId, userId);
   }
 }
